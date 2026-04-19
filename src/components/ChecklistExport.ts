@@ -1,7 +1,9 @@
 import { VisitaData } from './ChecklistData';
+import * as XLSX from 'xlsx-js-style';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export async function exportExcel(cod: string, v: VisitaData) {
-  const XLSX = await import('xlsx-js-style');
   const wb = XLSX.utils.book_new();
   const ws_data: any[][] = [];
 
@@ -159,9 +161,6 @@ export async function exportPDF(cod: string, v: VisitaData) {
   const siPct = total3 > 0 ? ((siAll / total3) * 100).toFixed(1) : "0.0";
   const noPct = total3 > 0 ? ((noAll / total3) * 100).toFixed(1) : "0.0";
   const naPct = total3 > 0 ? ((naAll / total3) * 100).toFixed(1) : "0.0";
-
-  const { jsPDF } = await import('jspdf');
-  const html2canvas = (await import('html2canvas')).default;
 
   const htmlContent = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">

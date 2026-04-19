@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Crosshair, Target, ListChecks, Lightbulb, MessageSquare, PenTool, Plus, History, Save, Trash2, FileSpreadsheet, FileText, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 import SignaturePad from './SignaturePad';
 import { Visita, TEMAS_DISPONIBLES } from '../types/visita';
 
@@ -245,7 +246,6 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   };
 
   const exportSinglePDF = async (v: Visita) => {
-    const html2pdf = (await import('html2pdf.js')).default;
     const iconoPersonalizadoB64 = "/Nestle-Logо.png";
     const printDiv = document.createElement('div');
     printDiv.innerHTML = `
