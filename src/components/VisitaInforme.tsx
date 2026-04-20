@@ -246,10 +246,27 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   };
 
   const exportSinglePDF = async (v: Visita) => {
-    const iconoPersonalizadoB64 = "/nestle-logo.png";
+    let iconoBase64 = "/nestle-logo.png";
+    try {
+      // Intentamos obtener la imagen desde la caché del Service Worker y convertirla a Base64
+      const response = await fetch("/nestle-logo.png");
+      if (response.ok) {
+        const blob = await response.blob();
+        iconoBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+    } catch (e) {
+      console.warn("Usando ruta relativa como respaldo para el logo:", e);
+    }
+
     const printDiv = document.createElement('div');
+    // Forzamos un ancho para que el renderizado sea consistente
+    printDiv.style.width = '800px';
     printDiv.innerHTML = `
-        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222;">
+        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white;">
             <table style="width: 100%; border-bottom: 3px solid #003087; padding-bottom: 15px; margin-bottom: 25px;">
                 <tr>
                     <td style="vertical-align: top;">
@@ -257,7 +274,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                         <span style="color: #666; font-size: 14px;">Milk Sourcing Colombia</span>
                     </td>
                     <td style="vertical-align: top; text-align: right;">
-                        <img src="${iconoPersonalizadoB64}" style="height: 80px; width: auto; object-fit: contain;">
+                        <img src="${iconoBase64}" style="height: 80px; width: auto; max-width: 200px; object-fit: contain;">
                     </td>
                 </tr>
             </table>
