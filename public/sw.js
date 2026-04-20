@@ -1,11 +1,11 @@
-const CACHE_NAME = 'asesor-tecnico-lacteo-v3';
+const CACHE_NAME = 'asesor-tecnico-lacteo-v4';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon-512x512.png',
   '/farm-management-1.png',
-  '/Nestle-Logо.png'
+  '/Nestle-Logo.png'
 ];
 
 // Estrategia Stale-While-Revalidate

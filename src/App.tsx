@@ -31,7 +31,7 @@ export default function App() {
         </div>
         <div className="w-36 h-36 flex items-center justify-end">
           <img
-            src="/Nestle-Logо.png"
+            src="/Nestle-Logo.png"
             alt="Nestlé Logo"
             className="w-full h-full object-contain"
             onError={(e) => {
@@ -81,12 +81,15 @@ a Finca`}
         />
       </div>
 
-      <div className="mt-8 -mx-6 overflow-hidden rounded-3xl">
+      <div className="mt-8 -mx-6 overflow-hidden rounded-3xl border-2 border-[#63513d]/10 bg-white/50">
         <img
           src="/farm-management-1.png"
-          alt="Gestión Asesor de Fincas"
+          alt="Banner Gestión Asesores (Asegúrate de subir la imagen a /public/farm-management-1.png en GitHub)"
           className="w-full h-auto shadow-md"
           referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
         />
       </div>
     </motion.div>
