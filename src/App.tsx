@@ -3,12 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, ReactNode } from 'react';
-import { ClipboardList, CheckSquare, GraduationCap, ArrowLeft, LayoutDashboard, UserCheck, BookOpen } from 'lucide-react';
+import { useState, ReactNode, lazy, Suspense } from 'react';
+import { ClipboardList, CheckSquare, GraduationCap, ArrowLeft, LayoutDashboard, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import VisitaInforme from './components/VisitaInforme';
 
-import ChecklistTanques from './components/ChecklistTanques';
+const VisitaInforme = lazy(() => import('./components/VisitaInforme'));
+const ChecklistTanques = lazy(() => import('./components/ChecklistTanques'));
+
+// Componente simple de carga para Suspense
+const LoadingScreen = () => (
+  <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center bg-white/50 animate-pulse">
+    <Loader2 className="w-12 h-12 text-[#63513d] animate-spin mb-4" />
+    <h2 className="text-xl font-bold text-[#63513d]">Cargando módulo...</h2>
+    <p className="text-gray-400 text-sm mt-2">Optimizando recursos para una mejor experiencia offline.</p>
+  </div>
+);
 
 // Custom Screen IDs
 type ScreenId = 'homeScreen' | 'visitaScreen' | 'checklistScreen' | 'capacitacionScreen';
@@ -129,8 +138,10 @@ a Finca`}
         <main className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             {currentScreen === 'homeScreen' && renderHomeScreen()}
-            {currentScreen === 'visitaScreen' && <VisitaInforme onBack={() => openScreen('homeScreen')} />}
-            {currentScreen === 'checklistScreen' && <ChecklistTanques onBack={() => openScreen('homeScreen')} />}
+            <Suspense fallback={<LoadingScreen />}>
+              {currentScreen === 'visitaScreen' && <VisitaInforme onBack={() => openScreen('homeScreen')} />}
+              {currentScreen === 'checklistScreen' && <ChecklistTanques onBack={() => openScreen('homeScreen')} />}
+            </Suspense>
             {currentScreen === 'capacitacionScreen' && renderDetailScreen('Soporte de Capacitaciones')}
           </AnimatePresence>
         </main>
