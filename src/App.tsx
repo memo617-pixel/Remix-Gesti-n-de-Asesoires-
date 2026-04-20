@@ -31,7 +31,7 @@ export default function App() {
         </div>
         <div className="w-36 h-36 flex items-center justify-end">
           <img
-            src="/Nestle-Logo.png"
+            src="/nestle-logo.png"
             alt="Nestlé Logo"
             className="w-full h-full object-contain"
             onError={(e) => {

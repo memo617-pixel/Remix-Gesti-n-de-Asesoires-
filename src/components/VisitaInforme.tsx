@@ -246,7 +246,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   };
 
   const exportSinglePDF = async (v: Visita) => {
-    const iconoPersonalizadoB64 = "/Nestle-Logo.png";
+    const iconoPersonalizadoB64 = "/nestle-logo.png";
     const printDiv = document.createElement('div');
     printDiv.innerHTML = `
         <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222;">
