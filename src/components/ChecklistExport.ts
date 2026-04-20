@@ -1,7 +1,6 @@
 import { VisitaData } from './ChecklistData';
 import * as XLSX from 'xlsx-js-style';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
 
 export async function exportExcel(cod: string, v: VisitaData) {
   const wb = XLSX.utils.book_new();
@@ -247,55 +246,19 @@ export async function exportPDF(cod: string, v: VisitaData) {
 </div>
 </body></html>`;
 
-  try {
-    const iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:absolute;left:-9999px;top:0;width:794px;";
-    document.body.appendChild(iframe);
+  const opt: any = {
+    margin: [5, 0],
+    filename: `Checklist_${cod}_${v.fecha}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
 
-    iframe.onload = async function() {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const canvas = await html2canvas(iframe.contentDocument!.body, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          width: 794,
-          windowWidth: 794
-        });
-
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const margin = 10;
-        const imgW = pageW - margin * 2;
-        const imgH = (canvas.height * imgW) / canvas.width;
-        const imgData = canvas.toDataURL("image/png");
-
-        let heightLeft = imgH;
-        let position = margin;
-
-        pdf.addImage(imgData, "PNG", margin, position, imgW, imgH);
-        heightLeft -= (pageH - margin * 2);
-
-        while (heightLeft > 0) {
-          position = heightLeft - imgH + margin;
-          pdf.addPage();
-          pdf.addImage(imgData, "PNG", margin, position, imgW, imgH);
-          heightLeft -= (pageH - margin * 2);
-        }
-
-        pdf.save(`Checklist_${cod}_${v.fecha}.pdf`);
-      } catch (err) {
-        console.error("Error html2canvas:", err);
-      } finally {
-        document.body.removeChild(iframe);
-      }
-    };
-
-    iframe.srcdoc = htmlContent;
-  } catch (err) {
-    console.error("Error PDF:", err);
-  }
+  const printDiv = document.createElement('div');
+  printDiv.style.width = '794px'; // A4 width at 96 DPI
+  printDiv.innerHTML = htmlContent;
+  
+  html2pdf().set(opt).from(printDiv).save().then(() => {
+    // Optional: cleanup if needed, but not strictly necessary as it's not in DOM
+  });
 }
