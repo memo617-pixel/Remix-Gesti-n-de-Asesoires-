@@ -390,9 +390,9 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             <div>
               <div className="bg-[#4a2c0b] text-white px-4 py-3 rounded-t-2xl font-bold text-sm shadow-inner border-b-4 border-[#3a2208]">Tema de la Visita</div>
               <div className="bg-white p-4 grid grid-cols-2 gap-3 border-x-2 border-gray-200">
-                {TEMAS_DISPONIBLES.map(t => (
+                {TEMAS_DISPONIBLES.map((t, index) => (
                   <button
-                    key={t.id}
+                    key={`${t.id}-${index}`}
                     onClick={() => toggleTema(t.id)}
                     className={`flex items-center gap-2 border-2 px-3 py-3 rounded-2xl text-[12px] font-bold transition-all active:translate-y-1 active:border-b-2 ${selectedTemas.has(t.id) ? 'bg-[#63513d] text-white border-[#4a2c0b] border-b-4 shadow-[0_4px_0_0_#4a2c0b]' : 'bg-white text-gray-700 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] hover:bg-gray-50'}`}
                   >
@@ -487,8 +487,8 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                     <p>No tienes visitas guardadas</p>
                   </div>
                 ) : (
-                  visitas.map(v => (
-                    <div key={v.id} onClick={() => setDetailVisit(v)} className="bg-white border border-gray-100 rounded-2xl p-4 cursor-pointer hover:shadow-md transition flex flex-col gap-2">
+                  visitas.map((v, index) => (
+                    <div key={`${v.id}-${index}`} onClick={() => setDetailVisit(v)} className="bg-white border border-gray-100 rounded-2xl p-4 cursor-pointer hover:shadow-md transition flex flex-col gap-2">
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="font-bold text-gray-800">{v.proveedor}</div>
@@ -560,7 +560,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                 <div>
                   <div className="text-xs uppercase font-bold text-gray-400 mb-2">Temas Tratados</div>
                   <div className="flex flex-wrap gap-2">
-                    {detailVisit.temas.map((t, i) => <span key={i} className="bg-[#63513d] text-white px-3 py-1.5 rounded-xl text-xs font-medium">{t}</span>)}
+                    {detailVisit.temas.map((t, i) => <span key={`detail-tema-${i}`} className="bg-[#63513d] text-white px-3 py-1.5 rounded-xl text-xs font-medium">{t}</span>)}
                   </div>
                 </div>
               )}

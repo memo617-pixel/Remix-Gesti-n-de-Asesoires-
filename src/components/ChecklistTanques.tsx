@@ -240,13 +240,13 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
               <p className="text-sm font-bold">No hay auditorías guardadas</p>
             </div>
           ) : (
-            keys.map(cod => {
+            keys.map((cod, index) => {
               const p = hist[cod];
               const v = p.visita as VisitaData;
               if (!v) return null;
               const pct = v.pct || 0;
               return (
-                <div key={cod} onClick={() => setViewDetailCod(cod)} className="bg-white border rounded-[16px] p-3.5 mb-2.5 active:scale-[0.98] transition-transform cursor-pointer">
+                <div key={`${cod}-${index}`} onClick={() => setViewDetailCod(cod)} className="bg-white border rounded-[16px] p-3.5 mb-2.5 active:scale-[0.98] transition-transform cursor-pointer">
                   <div className="text-[13px] font-bold text-[#002B5C] mb-1">{cod} — {p.nom}</div>
                   <div className="text-[11px] text-[#94a3b8] mb-2 font-medium">Fecha: {v.fecha} · Asesor: {v.asesor}</div>
                   <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
@@ -345,13 +345,13 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
         
         {/* Preguntas */}
         <div className="mt-5 flex flex-col gap-3">
-          {Object.entries(SECCIONES).map(([sec, preguntas]) => (
-            <div key={sec} className="flex flex-col gap-3">
+          {Object.entries(SECCIONES).map(([sec, preguntas], secIdx) => (
+            <div key={`sec-${secIdx}`} className="flex flex-col gap-3">
               <div className="mt-2 text-[10px] font-bold text-white bg-[#002B5C] px-3.5 py-1.5 rounded-full inline-flex self-start uppercase tracking-wide">
                 {sec}
               </div>
               
-              {preguntas.map((p) => {
+              {preguntas.map((p, pIdx) => {
                 const i = globalIdx++;
                 const isSoloObs = SOLO_OBS.has(i);
                 const isCurva = i === IDX_CURVA;
@@ -363,7 +363,7 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
                 const ans = respuestas[i] || null;
 
                 return (
-                  <div key={i} className={`bg-white rounded-[12px] p-3.5 shadow-sm border-[1.5px] transition-all
+                  <div key={`q-${i}-${pIdx}`} className={`bg-white rounded-[12px] p-3.5 shadow-sm border-[1.5px] transition-all
                     ${isSoloObs ? 'border-l-4 border-l-[#00B4D8]' : ''}
                     ${ans === 'SI' ? 'bg-[#f0fdf4] border-[#16a34a]' : ''}
                     ${ans === 'NO' ? 'bg-[#fef2f2] border-[#dc2626]' : ''}
