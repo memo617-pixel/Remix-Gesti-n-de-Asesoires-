@@ -31,7 +31,79 @@
     <title>Milk Sourcing</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Splash Screen Loader (Visible only while React loads) -->
+      <style>
+        .splash-container {
+          position: fixed;
+          inset: 0;
+          background: #fdfcfb;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-family: system-ui, -apple-system, sans-serif;
+          z-index: 9999;
+        }
+        .splash-logo {
+          width: 120px;
+          height: auto;
+          margin-bottom: 40px;
+          opacity: 0;
+          transform: translateY(20px);
+          animation: splashFadeIn 0.8s ease-out forwards;
+        }
+        .loading-bar-container {
+          width: 200px;
+          height: 4px;
+          background: #63513d20;
+          border-radius: 10px;
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        .loading-bar-fill {
+          width: 40%;
+          height: 100%;
+          background: #63513d;
+          border-radius: 10px;
+          animation: splashProgress 1.5s infinite ease-in-out;
+        }
+        .splash-text {
+          color: #63513d;
+          font-weight: 800;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          text-align: center;
+          animation: splashPulse 2s infinite ease-in-out;
+        }
+        .splash-subtext {
+          color: #63513d60;
+          font-size: 10px;
+          margin-top: 8px;
+          font-weight: 500;
+        }
+        @keyframes splashFadeIn {
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes splashProgress {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(250%); }
+        }
+        @keyframes splashPulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+      </style>
+      <div class="splash-container">
+        <img src="/nestle-logo.png" class="splash-logo" alt="Nestlé">
+        <div class="loading-bar-container">
+          <div class="loading-bar-fill"></div>
+        </div>
+        <div class="splash-text">Espere mientras carga la aplicación</div>
+        <div class="splash-subtext">Optimizada para trabajo en campo (Offline)</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
