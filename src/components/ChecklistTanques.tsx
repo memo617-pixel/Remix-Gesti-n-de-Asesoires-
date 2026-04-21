@@ -138,12 +138,12 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
         if (existingRecord && existingRecord.id && existingRecord.id !== editingId) {
           await db.auditorias.delete(existingRecord.id);
         }
-        await db.auditorias.update(editingId, auditoria);
+        await db.auditorias.put({ ...auditoria, id: editingId });
         alert("✅ Cambios guardados para proveedor " + cod);
         cancelarEdicion();
       } else if (existingRecord && existingRecord.id) {
         // Guardando nuevo, pero ya existía el código. Sobrescribir (solo última versión)
-        await db.auditorias.update(existingRecord.id, auditoria);
+        await db.auditorias.put({ ...auditoria, id: existingRecord.id });
         alert("✅ Versión actualizada — proveedor " + cod);
       } else {
         // Guardando nuevo completamente fresco

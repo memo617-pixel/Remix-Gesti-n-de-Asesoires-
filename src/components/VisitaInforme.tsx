@@ -108,11 +108,12 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     };
 
     try {
+      const dataToSave = { ...visita } as VisitaGeneralData;
       if (editingId) {
-        await db.visitas.update(editingId, visita);
+        await db.visitas.put(dataToSave);
         alert("✅ Cambios guardados y actualizados.");
       } else {
-        await db.visitas.add(visita);
+        await db.visitas.add(dataToSave);
         alert("✅ Informe guardado con éxito.");
       }
       startNew();
@@ -185,9 +186,12 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const deleteVisit = async (id: number) => {
     if (confirm('¿Seguro que deseas eliminar esta visita?')) {
       try {
-        await db.visitas.delete(id);
+        const numericId = Number(id);
+        await db.visitas.delete(numericId);
+        alert('✅ Visita eliminada.');
       } catch (error) {
         console.error("Error al eliminar", error);
+        alert('❌ Error al eliminar.');
       }
     }
   };
@@ -224,15 +228,16 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     const files = e.target.files;
     if (!files) return;
     
-    if (fotos.length + files.length > 5) {
-      alert("⚠️ Solo puedes adjuntar un máximo de 5 fotos.");
+    if (fotos.length + files.length > 6) {
+      alert("⚠️ Solo puedes adjuntar un máximo de 6 fotos.");
       return;
     }
 
+    const fileList = Array.from(files) as File[];
     const newFotos = [...fotos];
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (newFotos.length < 5) {
+    
+    for (const file of fileList) {
+        if (newFotos.length < 6) {
             try {
                 const base64 = await compressImage(file, 800, 0.7);
                 newFotos.push(base64);
@@ -301,10 +306,9 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     }
 
     const printDiv = document.createElement('div');
-    // Forzamos un ancho para que el renderizado sea consistente
-    printDiv.style.width = '800px';
+    // Para PDF es mejor no inyectar en el dom principal si no es necesario o usar opacidad 0
     printDiv.innerHTML = `
-        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white;">
+        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; width: 800px; box-sizing: border-box;">
             <table style="width: 100%; border-bottom: 3px solid #003087; padding-bottom: 15px; margin-bottom: 25px;">
                 <tr>
                     <td style="vertical-align: top;">
@@ -350,13 +354,13 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
         </div>
         ${v.fotos && v.fotos.length > 0 ? `
         <div class="html2pdf__page-break"></div>
-        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; page-break-before: always;">
+        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; page-break-before: always; width: 800px; box-sizing: border-box;">
             <h2 style="color: #003087; text-align: center; font-size: 20px; text-transform: uppercase; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">REGISTRO FOTOGRÁFICO</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: flex-start;">
                 ${v.fotos.map((foto, idx) => `
-                    <div style="border: 1px solid #ddd; padding: 5px; border-radius: 8px; text-align: center; width: 45%; margin-bottom: 10px;">
-                        <img src="${foto}" style="width: 100%; height: 220px; object-fit: cover; border-radius: 4px;">
-                        <div style="margin-top: 5px; font-size: 11px; color: #666; font-weight: bold;">Foto ${idx + 1}</div>
+                    <div style="border: 1px solid #ddd; padding: 5px; border-radius: 8px; text-align: center; width: 220px; margin-bottom: 15px; background: #fafafa;">
+                        <img src="${foto}" style="width: 100%; height: auto; max-height: 350px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto;">
+                        <div style="margin-top: 8px; font-size: 11px; color: #666; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">Foto ${idx + 1}</div>
                     </div>
                 `).join('')}
             </div>
@@ -368,10 +372,16 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       margin: 0, 
       filename: `Reporte_${(v.proveedor||"Finca").replace(/ /g, '_')}.pdf`, 
       image: { type: 'jpeg' as const, quality: 0.98 }, 
-      html2canvas: { scale: 2, useCORS: true }, 
+      html2canvas: { scale: 2, useCORS: true, logging: false }, 
       jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const } 
     };
-    html2pdf().set(opciones).from(printDiv).save();
+
+    try {
+      await html2pdf().set(opciones).from(printDiv).save();
+    } catch (error) {
+      console.error("Error al exportar PDF:", error);
+      alert("❌ Error al generar el PDF. Reintenta por favor.");
+    }
   };
 
   return (
@@ -529,7 +539,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                     <Camera className="w-4 h-4 text-emerald-600 drop-shadow-sm" /> 
                     REGISTRO FOTOGRÁFICO
                   </div>
-                  <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{fotos.length}/5</span>
+                  <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{fotos.length}/6</span>
                 </label>
                 
                 <div className="grid grid-cols-3 gap-2 mb-3">
@@ -541,11 +551,11 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                       </button>
                     </div>
                   ))}
-                  {fotos.length < 5 && (
+                  {fotos.length < 6 && (
                     <label className="aspect-square rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50 hover:bg-emerald-100 flex flex-col items-center justify-center text-emerald-600 cursor-pointer transition-colors">
                       <Camera className="w-6 h-6 mb-1 opacity-80" />
                       <span className="text-[10px] font-bold">Adjuntar</span>
-                      <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+                      <input type="file" accept="image/jpeg, image/png, image/jpg, image/webp" multiple onChange={handlePhotoUpload} className="hidden" />
                     </label>
                   )}
                 </div>
