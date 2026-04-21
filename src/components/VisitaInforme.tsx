@@ -420,8 +420,8 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             </div>
         </div>
         ${v.fotos && v.fotos.length > 0 ? `
-        <div class="html2pdf__page-break"></div>
-        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; page-break-before: always; width: 800px; box-sizing: border-box;">
+        <div style="page-break-before: always;"></div>
+        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; width: 800px; box-sizing: border-box;">
             <h2 style="color: #003087; text-align: center; font-size: 20px; text-transform: uppercase; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">REGISTRO FOTOGRÁFICO</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: flex-start;">
                 ${v.fotos.map((foto, idx) => `
