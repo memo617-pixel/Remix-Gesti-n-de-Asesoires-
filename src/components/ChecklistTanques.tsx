@@ -183,7 +183,7 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
       const v = currentVisitData;
       const pct = v.pct || 0;
       return (
-        <div className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
+        <div key={`checklist-detail-${viewDetailCod}`} className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
           <div className="bg-[#002B5C] px-5 py-4 flex items-center justify-between sticky top-0 z-50">
             <button onClick={() => setViewDetailCod(null)} className="text-white flex items-center gap-2 text-sm font-bold">
               <ArrowLeft className="w-5 h-5"/> Volver
@@ -225,7 +225,7 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
     const keys = Object.keys(hist).sort();
 
     return (
-      <div className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
+      <div key="checklist-history-list" className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
         <div className="bg-[#002B5C] px-5 py-4 flex items-center justify-between sticky top-0 z-50">
           <button onClick={() => setViewHistory(false)} className="text-white p-1 -ml-1">
             <X className="w-6 h-6"/>
@@ -265,7 +265,7 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
   let globalIdx = 0;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#f8fafc] text-slate-800 relative overflow-hidden">
+    <div key="checklist-form-main" className="flex flex-col h-[100dvh] bg-[#f8fafc] text-slate-800 relative overflow-hidden">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-[#001A3A] px-5 py-4 flex flex-col gap-2.5 shadow-md">
         <div className="flex items-center justify-between">

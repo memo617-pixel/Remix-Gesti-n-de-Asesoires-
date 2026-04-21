@@ -56,6 +56,7 @@ export default function App() {
 
   const renderHomeScreen = () => (
     <motion.div 
+      key="home-screen"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.05 }}
@@ -106,6 +107,7 @@ a Finca`}
 
   const renderDetailScreen = (title: string) => (
     <motion.div 
+      key={`detail-${title}`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
@@ -138,9 +140,9 @@ a Finca`}
         <main className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
             {currentScreen === 'homeScreen' && renderHomeScreen()}
-            <Suspense fallback={<LoadingScreen />}>
-              {currentScreen === 'visitaScreen' && <VisitaInforme onBack={() => openScreen('homeScreen')} />}
-              {currentScreen === 'checklistScreen' && <ChecklistTanques onBack={() => openScreen('homeScreen')} />}
+            <Suspense key="suspense-layer" fallback={<LoadingScreen />}>
+              {currentScreen === 'visitaScreen' && <VisitaInforme key="visita-form" onBack={() => openScreen('homeScreen')} />}
+              {currentScreen === 'checklistScreen' && <ChecklistTanques key="checklist-form" onBack={() => openScreen('homeScreen')} />}
             </Suspense>
             {currentScreen === 'capacitacionScreen' && renderDetailScreen('Soporte de Capacitaciones')}
           </AnimatePresence>

@@ -543,7 +543,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       )}
 
       {detailVisit && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+        <div key={`detail-modal-${detailVisit.id}`} className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col relative">
             <div className="p-4 border-b flex items-center justify-between bg-emerald-50 shrink-0">
               <div className="font-bold text-emerald-800 flex items-center gap-2"><FileText className="w-5 h-5" /> Detalle de Visita</div>
