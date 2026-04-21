@@ -19,6 +19,7 @@ export interface Visita {
   firmaProveedor: string;
   firmaAsesor: string;
   nombreAsesor: string;
+  fotos?: string[];
 }
 
 export const TEMAS_DISPONIBLES = [

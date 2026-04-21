@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Crosshair, Target, ListChecks, Lightbulb, MessageSquare, PenTool, Plus, History, Save, Trash2, FileSpreadsheet, FileText, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, MapPin, Crosshair, Target, ListChecks, Lightbulb, MessageSquare, PenTool, Plus, History, Save, Trash2, FileSpreadsheet, FileText, X, Camera } from 'lucide-react';
 import { motion } from 'motion/react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, VisitaGeneralData } from '../lib/db';
 import SignaturePad from './SignaturePad';
+import { compressImage } from '../lib/imageUtils';
 import { Visita, TEMAS_DISPONIBLES } from '../types/visita';
 
 interface VisitaInformeProps {
@@ -12,7 +15,9 @@ interface VisitaInformeProps {
 
 export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
-  const [visitas, setVisitas] = useState<Visita[]>([]);
+
+  // Dexie live queries (replaces localStorage visitas state)
+  const visitas = (useLiveQuery(() => db.visitas.reverse().toArray(), []) as Visita[]) || [];
   
   // Form State
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -35,23 +40,12 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const [firmaProveedor, setFirmaProveedor] = useState('');
   const [firmaAsesor, setFirmaAsesor] = useState('');
   const [nombreAsesor, setNombreAsesor] = useState('');
+  const [fotos, setFotos] = useState<string[]>([]);
 
   // UI State
   const [isLocating, setIsLocating] = useState(false);
   const [sigModalType, setSigModalType] = useState<'prov' | 'asesor' | null>(null);
   const [detailVisit, setDetailVisit] = useState<Visita | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('nestle_visitas');
-    if (saved) {
-      setVisitas(JSON.parse(saved));
-    }
-  }, []);
-
-  const saveToLocal = (data: Visita[]) => {
-    setVisitas(data);
-    localStorage.setItem('nestle_visitas', JSON.stringify(data));
-  };
 
   const toggleTema = (id: string) => {
     const newSet = new Set(selectedTemas);
@@ -83,7 +77,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!proveedor.trim()) {
       alert("⚠️ Por favor ingresa el nombre del Proveedor.");
       return;
@@ -109,18 +103,24 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       alt,
       firmaProveedor,
       firmaAsesor,
-      nombreAsesor: nombreAsesor.toUpperCase()
+      nombreAsesor: nombreAsesor.toUpperCase(),
+      fotos
     };
 
-    if (editingId) {
-      saveToLocal(visitas.map(v => v.id === editingId ? visita : v));
-      alert("✅ Cambios guardados y actualizados.");
-    } else {
-      saveToLocal([visita, ...visitas]);
-      alert("✅ Informe guardado con éxito.");
+    try {
+      if (editingId) {
+        await db.visitas.update(editingId, visita);
+        alert("✅ Cambios guardados y actualizados.");
+      } else {
+        await db.visitas.add(visita);
+        alert("✅ Informe guardado con éxito.");
+      }
+      startNew();
+      setActiveTab('history');
+    } catch (error) {
+      console.error("Error al guardar en IndexDB:", error);
+      alert("❌ Hubo un error al guardar los datos localmente.");
     }
-    startNew();
-    setActiveTab('history');
   };
 
   const startNew = () => {
@@ -144,6 +144,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setFirmaProveedor('');
     setFirmaAsesor('');
     setNombreAsesor('');
+    setFotos([]);
     setActiveTab('form');
   };
 
@@ -175,14 +176,19 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setFirmaProveedor(v.firmaProveedor);
     setFirmaAsesor(v.firmaAsesor);
     setNombreAsesor(v.nombreAsesor || '');
+    setFotos(v.fotos || []);
     
     setDetailVisit(null);
     setActiveTab('form');
   };
 
-  const deleteVisit = (id: number) => {
+  const deleteVisit = async (id: number) => {
     if (confirm('¿Seguro que deseas eliminar esta visita?')) {
-      saveToLocal(visitas.filter(v => v.id !== id));
+      try {
+        await db.visitas.delete(id);
+      } catch (error) {
+        console.error("Error al eliminar", error);
+      }
     }
   };
 
@@ -212,6 +218,38 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       else if (e.target.id === 'recomendaciones') setRecomendaciones('• ');
       else if (e.target.id === 'comentarios') setComentarios('• ');
     }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    if (fotos.length + files.length > 5) {
+      alert("⚠️ Solo puedes adjuntar un máximo de 5 fotos.");
+      return;
+    }
+
+    const newFotos = [...fotos];
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (newFotos.length < 5) {
+            try {
+                const base64 = await compressImage(file, 800, 0.7);
+                newFotos.push(base64);
+            } catch (err) {
+                console.error("Error al procesar la imagen", err);
+                alert("Hubo un error al procesar una imagen.");
+            }
+        }
+    }
+    setFotos(newFotos);
+    
+    // Reset file input so the same file could be selected again if needed
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number) => {
+    setFotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const exportAllExcel = () => {
@@ -310,6 +348,20 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                 <b style="color: #666;">VERSION JUAN 1.0</b>
             </div>
         </div>
+        ${v.fotos && v.fotos.length > 0 ? `
+        <div class="html2pdf__page-break"></div>
+        <div style="padding: 40px; font-family: 'Helvetica', Arial, sans-serif; color: #222; background: white; page-break-before: always;">
+            <h2 style="color: #003087; text-align: center; font-size: 20px; text-transform: uppercase; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">REGISTRO FOTOGRÁFICO</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; justify-content: center;">
+                ${v.fotos.map((foto, idx) => `
+                    <div style="border: 1px solid #ddd; padding: 5px; border-radius: 8px; text-align: center; width: 45%; margin-bottom: 10px;">
+                        <img src="${foto}" style="width: 100%; height: 220px; object-fit: cover; border-radius: 4px;">
+                        <div style="margin-top: 5px; font-size: 11px; color: #666; font-weight: bold;">Foto ${idx + 1}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        ` : ''}
     `;
     
     const opciones = { 
@@ -468,6 +520,35 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
               <div>
                 <label className="text-sm font-extrabold text-gray-700 mb-2 border-b-2 border-gray-100 pb-2 flex items-center gap-2 tracking-tight">NOMBRE DEL ASESOR</label>
                 <input type="text" value={nombreAsesor} onChange={e => setNombreAsesor(e.target.value.toUpperCase())} placeholder="Nombre del asesor" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all uppercase tracking-wider bg-transparent font-medium" />
+              </div>
+
+              {/* Registro Fotográfico */}
+              <div className="pt-2 border-t-2 border-gray-100 mt-4">
+                <label className="text-sm font-extrabold text-gray-700 mb-3 border-b-2 border-gray-100 pb-2 flex items-center justify-between tracking-tight">
+                  <div className="flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-emerald-600 drop-shadow-sm" /> 
+                    REGISTRO FOTOGRÁFICO
+                  </div>
+                  <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{fotos.length}/5</span>
+                </label>
+                
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {fotos.map((imgBase64, i) => (
+                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-gray-200">
+                      <img src={imgBase64} alt={`foto-${i}`} className="w-full h-full object-cover" />
+                      <button onClick={() => removePhoto(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {fotos.length < 5 && (
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50 hover:bg-emerald-100 flex flex-col items-center justify-center text-emerald-600 cursor-pointer transition-colors">
+                      <Camera className="w-6 h-6 mb-1 opacity-80" />
+                      <span className="text-[10px] font-bold">Adjuntar</span>
+                      <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           </div>

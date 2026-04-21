@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Save, Plus, History, Download, FileText, Trash2, X, PenTool } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, type AuditoriaData } from '../lib/db';
 import { SECCIONES, SOLO_OBS, IDX_CURVA, VisitaData, DetalleVisita } from './ChecklistData';
 import { exportExcel, exportPDF } from './ChecklistExport';
 
@@ -10,8 +12,11 @@ interface ChecklistTanquesProps {
 export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
   // Navigation State
   const [viewHistory, setViewHistory] = useState(false);
-  const [viewDetailCod, setViewDetailCod] = useState<string | null>(null);
-  const [editingCod, setEditingCod] = useState<string | null>(null);
+  const [viewDetailId, setViewDetailId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Dexie live queries map to local state reactively
+  const auditoriasDB = useLiveQuery(() => db.auditorias.reverse().toArray(), []) || [];
 
   // Base state for Datos del Registro
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
@@ -76,8 +81,8 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
     limpiarFormulario();
   };
 
-  const handleGuardar = () => {
-    const cod = editingCod || codProveedor.trim();
+  const handleGuardar = async () => {
+    const cod = codProveedor.trim();
     if (!cod) return alert("⚠️ Ingresa el código del proveedor");
     if (answered === 0) return alert("⚠️ Responde al menos una pregunta");
 
@@ -116,35 +121,61 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
       pct: score, si, no, na, siAll, noAll, naAll, detalles
     };
 
-    const histText = localStorage.getItem("ck_v6") || "{}";
-    const hist = JSON.parse(histText);
-    hist[cod] = { nom: visita.nom, visita };
-    localStorage.setItem("ck_v6", JSON.stringify(hist));
-    
-    if (editingCod) {
-      alert("✅ Cambios guardados para proveedor " + cod);
-      cancelarEdicion();
-    } else {
-      alert("✅ Guardado — proveedor " + cod);
+    const auditoria: AuditoriaData = {
+      cod: cod,
+      nom: visita.nom,
+      fecha: fecha,
+      asesor: asesor || '-',
+      visita: visita
+    };
+
+    try {
+      // Buscar si ya existe una auditoría previa para este mismo código de proveedor
+      const existingRecord = await db.auditorias.where('cod').equals(cod).first();
+
+      if (editingId) {
+        // En caso de que se haya cambiado el código durante la edición a uno que ya existía
+        if (existingRecord && existingRecord.id && existingRecord.id !== editingId) {
+          await db.auditorias.delete(existingRecord.id);
+        }
+        await db.auditorias.update(editingId, auditoria);
+        alert("✅ Cambios guardados para proveedor " + cod);
+        cancelarEdicion();
+      } else if (existingRecord && existingRecord.id) {
+        // Guardando nuevo, pero ya existía el código. Sobrescribir (solo última versión)
+        await db.auditorias.update(existingRecord.id, auditoria);
+        alert("✅ Versión actualizada — proveedor " + cod);
+      } else {
+        // Guardando nuevo completamente fresco
+        await db.auditorias.add(auditoria);
+        alert("✅ Guardado — proveedor " + cod);
+      }
+    } catch (error) {
+      console.error("Error al guardar en IndexDB:", error);
+      alert("❌ Hubo un error al guardar los datos localmente.");
     }
   };
 
-  const handleEliminar = (cod: string) => {
+  const handleEliminar = async (id: number) => {
     if (!confirm("¿Eliminar esta visita permanentemente?")) return;
-    const histText = localStorage.getItem("ck_v6") || "{}";
-    const hist = JSON.parse(histText);
-    delete hist[cod];
-    localStorage.setItem("ck_v6", JSON.stringify(hist));
-    if (editingCod === cod) setEditingCod(null);
-    setViewDetailCod(null);
+    try {
+      const numericId = Number(id);
+      await db.auditorias.delete(numericId);
+      if (editingId === numericId) setEditingId(null);
+      setViewDetailId(null);
+      alert("✅ Visita eliminada.");
+    } catch (error) {
+       console.error("Error al eliminar", error);
+       alert("❌ Hubo un error al eliminar el registro.");
+    }
   };
 
   const iniciarEdicion = () => {
-    if (!viewDetailCod || !currentVisitData) return;
-    const v = currentVisitData;
-    setEditingCod(viewDetailCod);
+    if (!viewDetailId || !currentDbRecord) return;
+    const v = currentDbRecord.visita;
+    setEditingId(viewDetailId);
     setFecha(v.fecha || new Date().toISOString().split('T')[0]);
-    setCodProveedor(viewDetailCod);
+    setCodProveedor(currentDbRecord.cod);
     setNomProveedor(v.nom || '');
     setCodTanque(v.cod_tanque || '');
     setNomTanque(v.nom_tanque || '');
@@ -166,26 +197,27 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
     setExtras(newExt);
     setObservaciones(newObs);
     setViewHistory(false);
-    setViewDetailCod(null);
-    alert(`✏️ Editando proveedor ${viewDetailCod}`);
+    setViewDetailId(null);
+    alert(`✏️ Editando proveedor ${currentDbRecord.cod}`);
   };
 
   const cancelarEdicion = () => {
-    setEditingCod(null);
+    setEditingId(null);
     limpiarFormulario();
     alert("Edición cancelada");
   };
 
-  const currentVisitData = viewDetailCod ? JSON.parse(localStorage.getItem("ck_v6") || "{}")[viewDetailCod]?.visita as VisitaData : null;
+  const currentDbRecord = viewDetailId ? auditoriasDB.find(a => a.id === viewDetailId) : null;
+  const currentVisitData = currentDbRecord?.visita;
 
   if (viewHistory) {
-    if (viewDetailCod && currentVisitData) {
+    if (viewDetailId && currentVisitData && currentDbRecord) {
       const v = currentVisitData;
       const pct = v.pct || 0;
       return (
-        <div key={`checklist-detail-${viewDetailCod}`} className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
+        <div key={`checklist-detail-${viewDetailId}`} className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
           <div className="bg-[#002B5C] px-5 py-4 flex items-center justify-between sticky top-0 z-50">
-            <button onClick={() => setViewDetailCod(null)} className="text-white flex items-center gap-2 text-sm font-bold">
+            <button onClick={() => setViewDetailId(null)} className="text-white flex items-center gap-2 text-sm font-bold">
               <ArrowLeft className="w-5 h-5"/> Volver
             </button>
             <span className="text-white font-bold text-sm">Detalle</span>
@@ -194,7 +226,7 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
           <div className="p-4 flex-1">
             <div className="bg-[#EBF5FB] rounded-[18px] p-4 mb-4 border border-[#D6EAF8]">
               <div className="flex justify-between py-1.5 border-b border-[#D6EAF8]"><span className="text-[#64748b] font-bold text-[12px]">Fecha</span><span className="font-medium text-sm">{v.fecha}</span></div>
-              <div className="flex justify-between py-1.5 border-b border-[#D6EAF8]"><span className="text-[#64748b] font-bold text-[12px]">Proveedor</span><span className="font-medium text-sm">{viewDetailCod} · {v.nom}</span></div>
+              <div className="flex justify-between py-1.5 border-b border-[#D6EAF8]"><span className="text-[#64748b] font-bold text-[12px]">Proveedor</span><span className="font-medium text-sm">{currentDbRecord.cod} · {v.nom}</span></div>
               <div className="flex justify-between py-1.5 border-b border-[#D6EAF8]"><span className="text-[#64748b] font-bold text-[12px]">Tanque</span><span className="font-medium text-sm">{v.cod_tanque} · {v.nom_tanque}</span></div>
               <div className="flex justify-between py-1.5 border-b border-[#D6EAF8]"><span className="text-[#64748b] font-bold text-[12px]">Responsable</span><span className="font-medium text-sm">{v.responsable}</span></div>
               <div className="flex justify-between py-1.5"><span className="text-[#64748b] font-bold text-[12px]">Asesor</span><span className="font-medium text-sm">{v.asesor}</span></div>
@@ -212,17 +244,14 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
             </div>
 
             <button onClick={iniciarEdicion} className="w-full bg-[#00B4D8] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 mb-2 active:scale-95 transition-transform"><PenTool className="w-4 h-4"/> Editar</button>
-            <button onClick={() => exportExcel(viewDetailCod, v)} className="w-full bg-[#16a34a] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 mb-2 active:scale-95 transition-transform"><Download className="w-4 h-4"/> Exportar Excel</button>
-            <button onClick={() => exportPDF(viewDetailCod, v)} className="w-full bg-[#dc2626] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 mb-4 active:scale-95 transition-transform"><FileText className="w-4 h-4"/> Exportar PDF</button>
+            <button onClick={() => exportExcel(currentDbRecord.cod, v)} className="w-full bg-[#16a34a] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 mb-2 active:scale-95 transition-transform"><Download className="w-4 h-4"/> Exportar Excel</button>
+            <button onClick={() => exportPDF(currentDbRecord.cod, v)} className="w-full bg-[#dc2626] text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 mb-4 active:scale-95 transition-transform"><FileText className="w-4 h-4"/> Exportar PDF</button>
             
-            <button onClick={() => handleEliminar(viewDetailCod)} className="w-full bg-slate-100 text-slate-800 border border-slate-200 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4"/> Eliminar</button>
+            <button onClick={() => handleEliminar(viewDetailId!)} className="w-full bg-slate-100 text-slate-800 border border-slate-200 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4"/> Eliminar</button>
           </div>
         </div>
       );
     }
-
-    const hist = JSON.parse(localStorage.getItem("ck_v6") || "{}");
-    const keys = Object.keys(hist).sort();
 
     return (
       <div key="checklist-history-list" className="flex flex-col min-h-[100dvh] bg-[#f8fafc] text-slate-800">
@@ -234,20 +263,19 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
           <div className="w-6"/>
         </div>
         <div className="p-4 flex-1">
-          {keys.length === 0 ? (
+          {auditoriasDB.length === 0 ? (
             <div className="text-center py-10 text-slate-400">
               <div className="text-4xl mb-2">📭</div>
               <p className="text-sm font-bold">No hay auditorías guardadas</p>
             </div>
           ) : (
-            keys.map((cod, index) => {
-              const p = hist[cod];
-              const v = p.visita as VisitaData;
+            auditoriasDB.map((a, index) => {
+              const v = a.visita as VisitaData;
               if (!v) return null;
               const pct = v.pct || 0;
               return (
-                <div key={`${cod}-${index}`} onClick={() => setViewDetailCod(cod)} className="bg-white border rounded-[16px] p-3.5 mb-2.5 active:scale-[0.98] transition-transform cursor-pointer">
-                  <div className="text-[13px] font-bold text-[#002B5C] mb-1">{cod} — {p.nom}</div>
+                <div key={`hist-db-${a.id || index}`} onClick={() => setViewDetailId(a.id!)} className="bg-white border rounded-[16px] p-3.5 mb-2.5 active:scale-[0.98] transition-transform cursor-pointer">
+                  <div className="text-[13px] font-bold text-[#002B5C] mb-1">{a.cod} — {a.nom}</div>
                   <div className="text-[11px] text-[#94a3b8] mb-2 font-medium">Fecha: {v.fecha} · Asesor: {v.asesor}</div>
                   <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
                     <span className="text-[10px] font-bold text-[#94a3b8] font-mono">Última versión</span>
@@ -291,11 +319,11 @@ export default function ChecklistTanques({ onBack }: ChecklistTanquesProps) {
       </div>
       
       {/* Edit Banner */}
-      {editingCod && (
+      {editingId && (
         <div className="mx-4 mt-4 bg-[#fef3c7] border-2 border-[#d97706] rounded-xl p-3 flex items-center gap-3 shadow-sm">
           <span className="text-xl">✏️</span>
           <div className="flex-1 text-xs font-bold text-[#d97706]">
-            Modo edición — Proveedor <span className="text-[#002B5C]">{editingCod}</span>
+            Modo edición — Registro <span className="text-[#002B5C]">#{editingId}</span>
           </div>
           <button onClick={cancelarEdicion} className="bg-white border-[#d97706]/30 border text-[#d97706] px-3 py-1.5 rounded-full text-[11px] font-bold hover:bg-[#d97706] hover:text-white transition-colors">
             Cancelar
