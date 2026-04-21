@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, MapPin, Crosshair, Target, ListChecks, Lightbulb, MessageSquare, PenTool, Plus, History, Save, Trash2, FileSpreadsheet, FileText, X, Camera } from 'lucide-react';
 import { motion } from 'motion/react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import html2pdf from 'html2pdf.js';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, VisitaGeneralData } from '../lib/db';
@@ -257,32 +257,99 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setFotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  const applyExcelStyles = (ws: any, dataRows: any[][]) => {
+    if (!ws['!ref']) return;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    
+    // Auto-fit columns
+    const colWidths: any[] = [];
+    if (dataRows.length > 0) {
+      const numCols = dataRows[0].length;
+      for (let i = 0; i < numCols; i++) {
+        let maxLen = String(dataRows[0][i] || "").length;
+        for (let j = 1; j < dataRows.length; j++) {
+          const val = String(dataRows[j][i] || "");
+          if (val.length > maxLen) maxLen = val.length;
+        }
+        colWidths.push({ wch: Math.min(Math.max(maxLen + 4, 15), 60) });
+      }
+      ws['!cols'] = colWidths;
+    }
+    
+    ws['!view'] = [{ showGridLines: false }];
+
+    const headerStyle = {
+      font: { name: "Arial", sz: 14, bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "002B5C" }, patternType: "solid" },
+      alignment: { vertical: "center", horizontal: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    const bodyStyle = {
+      font: { name: "Arial", sz: 12 },
+      fill: { fgColor: { rgb: "FFFFFF" }, patternType: "solid" },
+      alignment: { vertical: "center", horizontal: "left", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellRef]) continue;
+        ws[cellRef].s = (R === 0) ? headerStyle : bodyStyle;
+      }
+    }
+  };
+
   const exportAllExcel = () => {
     if (visitas.length === 0) return alert("No hay visitas para exportar.");
-    const datos = visitas.map(v => ({
-      "Fecha": v.fecha, "Código": v.codigo, "Ruta": v.ruta, "Proveedor": v.proveedor,
-      "Teléfono": v.telefono, "Género": v.genero, "Edad": v.edad,
-      "Temas Tratados": v.temas.join(" | "), "Otros Temas": v.otros,
-      "Objetivo": v.objetivo, "Actividades": v.actividades, "Recomendaciones": v.recomendaciones,
-      "Comentarios": v.comentarios, "Latitud": v.lat || 'N/A', "Longitud": v.lng || 'N/A',
-      "Altitud (m.s.n.m)": v.alt || 'N/A'
-    }));
-    const ws = XLSX.utils.json_to_sheet(datos);
+    
+    // Header row
+    const ws_data: any[][] = [
+      ["Fecha", "Código", "Ruta", "Proveedor", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Latitud", "Longitud", "Altitud (m.s.n.m)"]
+    ];
+
+    // Data rows
+    visitas.forEach(v => {
+      ws_data.push([
+        v.fecha, v.codigo, v.ruta, v.proveedor, v.telefono, v.genero, v.edad, 
+        v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
+        v.comentarios, v.lat || 'N/A', v.lng || 'N/A', v.alt || 'N/A'
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    applyExcelStyles(ws, ws_data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Todas las Visitas");
     XLSX.writeFile(wb, "Historial_Visitas_General.xlsx");
   };
 
   const exportSingleExcel = (v: Visita) => {
-    const datos = [{
-      "Fecha": v.fecha, "Código": v.codigo, "Ruta": v.ruta, "Proveedor": v.proveedor,
-      "Teléfono": v.telefono, "Género": v.genero, "Edad": v.edad,
-      "Temas Tratados": v.temas.join(" | "), "Otros Temas": v.otros,
-      "Objetivo": v.objetivo, "Actividades": v.actividades, "Recomendaciones": v.recomendaciones,
-      "Comentarios": v.comentarios, "Latitud": v.lat || 'N/A', "Longitud": v.lng || 'N/A',
-      "Altitud (m.s.n.m)": v.alt || 'N/A'
-    }];
-    const ws = XLSX.utils.json_to_sheet(datos);
+    // Header row
+    const ws_data: any[][] = [
+      ["Fecha", "Código", "Ruta", "Proveedor", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Latitud", "Longitud", "Altitud (m.s.n.m)"]
+    ];
+
+    // Data row
+    ws_data.push([
+      v.fecha, v.codigo, v.ruta, v.proveedor, v.telefono, v.genero, v.edad, 
+      v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
+      v.comentarios, v.lat || 'N/A', v.lng || 'N/A', v.alt || 'N/A'
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    applyExcelStyles(ws, ws_data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Visita");
     XLSX.writeFile(wb, `Visita_${(v.proveedor || "Finca").replace(/ /g, '_')}.xlsx`);
