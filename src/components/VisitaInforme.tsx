@@ -316,15 +316,15 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     
     // Header row
     const ws_data: any[][] = [
-      ["Fecha", "Código", "Ruta", "Proveedor", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Latitud", "Longitud", "Altitud (m.s.n.m)"]
+      ["Fecha", "Código Proveedor", "Proveedor", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
     ];
 
     // Data rows
     visitas.forEach(v => {
       ws_data.push([
-        v.fecha, v.codigo, v.ruta, v.proveedor, v.telefono, v.genero, v.edad, 
+        v.fecha, v.codigo, v.proveedor, v.ruta, v.telefono, v.genero, v.edad, 
         v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
-        v.comentarios, v.lat || 'N/A', v.lng || 'N/A', v.alt || 'N/A'
+        v.comentarios, (v.lat && v.lng ? `${v.lat}, ${v.lng}` : 'N/A'), v.alt || 'N/A'
       ]);
     });
 
@@ -338,14 +338,14 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const exportSingleExcel = (v: Visita) => {
     // Header row
     const ws_data: any[][] = [
-      ["Fecha", "Código", "Ruta", "Proveedor", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Latitud", "Longitud", "Altitud (m.s.n.m)"]
+      ["Fecha", "Código Proveedor", "Proveedor", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
     ];
 
     // Data row
     ws_data.push([
-      v.fecha, v.codigo, v.ruta, v.proveedor, v.telefono, v.genero, v.edad, 
+      v.fecha, v.codigo, v.proveedor, v.ruta, v.telefono, v.genero, v.edad, 
       v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
-      v.comentarios, v.lat || 'N/A', v.lng || 'N/A', v.alt || 'N/A'
+      v.comentarios, (v.lat && v.lng ? `${v.lat}, ${v.lng}` : 'N/A'), v.alt || 'N/A'
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
@@ -389,8 +389,8 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             </table>
             <table style="width: 100%; margin-bottom: 25px; font-size: 13px; border-collapse: collapse;">
                 <tr><td style="padding: 8px; border: 1px solid #eee; width: 50%;"><b>Proveedor:</b> <span style="text-transform:uppercase;">${v.proveedor}</span></td><td style="padding: 8px; border: 1px solid #eee; width: 50%;"><b>Fecha:</b> ${v.fecha}</td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Teléfono:</b> ${v.telefono || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"><b>Código Finca:</b> ${v.codigo || '-'}</td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Ruta:</b> ${v.ruta || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Teléfono:</b> ${v.telefono || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"><b>Código Proveedor:</b> ${v.codigo || '-'}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Ruta/Tanque:</b> ${v.ruta || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"></td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #eee;" colspan="2"><b>Coordenadas GPS:</b> ${v.lat ? v.lat + ', ' + v.lng : 'No registradas'} <br><b style="margin-top:4px; display:inline-block;">Altitud:</b> ${v.alt !== null ? v.alt + ' m.s.n.m' : 'No registrada'}</td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #eee; background: #f8fafc;" colspan="2"><b>Temas Tratados:</b> ${v.temas.join(' | ')} ${v.otros ? '| Otros: ' + v.otros : ''}</td></tr>
             </table>
@@ -475,16 +475,16 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             <div className="bg-white rounded-2xl shadow p-5 space-y-4 border-2 border-gray-200 border-b-4">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Fecha</label>
-                  <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Fecha</label>
+                  <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Código</label>
-                  <input type="text" inputMode="numeric" value={codigo} onChange={e => setCodigo(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej. 12345" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Código Proveedor</label>
+                  <input type="text" inputMode="numeric" value={codigo} onChange={e => setCodigo(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej. 12345" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Ruta</label>
-                  <input type="text" value={ruta} onChange={e => setRuta(e.target.value)} placeholder="Ruta" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Ruta/Tanque</label>
+                  <input type="text" value={ruta} onChange={e => setRuta(e.target.value)} placeholder="Ruta/Tanque" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
                 </div>
               </div>
               <div>
