@@ -19,6 +19,7 @@ export interface Visita {
   firmaProveedor: string;
   firmaAsesor: string;
   nombreAsesor: string;
+  personaAtendio?: string;
   fotos?: string[];
 }
 

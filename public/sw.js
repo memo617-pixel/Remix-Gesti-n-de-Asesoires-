@@ -1,4 +1,4 @@
-const CACHE_NAME = 'asesor-tecnico-lacteo-v8';
+const CACHE_NAME = 'asesor-tecnico-lacteo-jgor-v1';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

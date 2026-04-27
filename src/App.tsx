@@ -4,11 +4,13 @@
  */
 
 import { useState, ReactNode, lazy, Suspense } from 'react';
-import { ClipboardList, CheckSquare, GraduationCap, ArrowLeft, LayoutDashboard, Loader2 } from 'lucide-react';
+import { ClipboardList, CheckSquare, GraduationCap, ArrowLeft, LayoutDashboard, Loader2, DownloadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { generateBackupZip } from './lib/backupService';
 
 const VisitaInforme = lazy(() => import('./components/VisitaInforme'));
 const ChecklistTanques = lazy(() => import('./components/ChecklistTanques'));
+const SoporteCapacitaciones = lazy(() => import('./components/SoporteCapacitaciones'));
 
 // Componente simple de carga para Suspense
 const LoadingScreen = () => (
@@ -24,13 +26,24 @@ type ScreenId = 'homeScreen' | 'visitaScreen' | 'checklistScreen' | 'capacitacio
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('homeScreen');
+  const [backupProgress, setBackupProgress] = useState<string>('');
 
   const openScreen = (screenId: ScreenId) => {
     setCurrentScreen(screenId);
   };
 
+  const handleBackup = async () => {
+    try {
+      setBackupProgress("Iniciando respaldo...");
+      await generateBackupZip((msg) => setBackupProgress(msg));
+    } catch (e) {
+      alert("Error al generar respaldo: " + e);
+      setBackupProgress("");
+    }
+  };
+
   const renderHeader = () => (
-    <header className="flex flex-col px-6 py-10 bg-[#fdfcfb] sticky top-0 z-20 border-b border-gray-100 gap-6 shadow-sm">
+    <header className="flex flex-col px-6 py-10 bg-[#fdfcfb] sticky top-0 z-20 border-b border-gray-100 gap-6 shadow-sm relative">
       <div className="flex justify-between items-start w-full">
         <div className="flex flex-col">
           <span className="text-[10px] uppercase tracking-[0.3em] text-[#63513d]/60 font-black mb-2">Advisor Platform</span>
@@ -51,6 +64,9 @@ export default function App() {
           />
         </div>
       </div>
+      <span className="absolute bottom-[5px] right-[10px] text-[10px] text-gray-400 font-medium">
+        Versión: JGOR_01_2026
+      </span>
     </header>
   );
 
@@ -102,6 +118,40 @@ a Finca`}
           }}
         />
       </div>
+
+      <div className="mt-6">
+        <button
+          onClick={handleBackup}
+          className="w-full bg-[#63513d] hover:bg-[#4a2c0b] text-white py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-sm md:text-base border-b-4 border-[#301c07] active:border-b-0 active:translate-y-1 transition-all shadow-md"
+        >
+          <DownloadCloud className="w-6 h-6" />
+          Generar Respaldo Estructurado (.zip)
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {backupProgress && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-[#f0edea] rounded-full mx-auto flex items-center justify-center mb-6">
+                <Loader2 className="w-8 h-8 text-[#63513d] animate-spin" />
+              </div>
+              <h3 className="text-xl font-bold text-[#63513d] mb-2 tracking-tight">Generando Respaldo</h3>
+              <p className="text-gray-500 font-medium text-sm animate-pulse">{backupProgress}</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 
@@ -143,8 +193,8 @@ a Finca`}
             <Suspense key="suspense-layer" fallback={<LoadingScreen />}>
               {currentScreen === 'visitaScreen' && <VisitaInforme key="visita-form" onBack={() => openScreen('homeScreen')} />}
               {currentScreen === 'checklistScreen' && <ChecklistTanques key="checklist-form" onBack={() => openScreen('homeScreen')} />}
+              {currentScreen === 'capacitacionScreen' && <SoporteCapacitaciones key="capacitacion-form" onBack={() => openScreen('homeScreen')} />}
             </Suspense>
-            {currentScreen === 'capacitacionScreen' && renderDetailScreen('Soporte de Capacitaciones')}
           </AnimatePresence>
         </main>
 

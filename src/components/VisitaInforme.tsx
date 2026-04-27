@@ -40,18 +40,47 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const [firmaProveedor, setFirmaProveedor] = useState('');
   const [firmaAsesor, setFirmaAsesor] = useState('');
   const [nombreAsesor, setNombreAsesor] = useState('');
+  const [personaAtendio, setPersonaAtendio] = useState('');
   const [fotos, setFotos] = useState<string[]>([]);
 
   // UI State
   const [isLocating, setIsLocating] = useState(false);
   const [sigModalType, setSigModalType] = useState<'prov' | 'asesor' | null>(null);
+  
+  // Handle orientation for signature pad
+  React.useEffect(() => {
+    if (sigModalType) {
+      if (screen.orientation && (screen.orientation as any).lock) {
+        (screen.orientation as any).lock('landscape').catch((e: any) => console.warn("Orientation lock failed. Ensure in fullscreen/user gesture.", e));
+      }
+    } else {
+      if (screen.orientation && screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    }
+  }, [sigModalType]);
+
   const [detailVisit, setDetailVisit] = useState<Visita | null>(null);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLng, setManualLng] = useState('');
+  const [manualAlt, setManualAlt] = useState('');
 
   const toggleTema = (id: string) => {
     const newSet = new Set(selectedTemas);
     if (newSet.has(id)) newSet.delete(id);
     else newSet.add(id);
     setSelectedTemas(newSet);
+  };
+
+  const saveManualLocation = () => {
+    setLat(manualLat);
+    setLng(manualLng);
+    setAlt(manualAlt ? parseFloat(manualAlt) : null);
+    setManualModalOpen(false);
+    setManualLat('');
+    setManualLng('');
+    setManualAlt('');
   };
 
   const getLocation = () => {
@@ -75,6 +104,20 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    const limited = digits.substring(0, 10);
+    let formatted = '';
+    if (limited.length > 0) formatted += limited.substring(0, 3);
+    if (limited.length > 3) formatted += ' ' + limited.substring(3, 6);
+    if (limited.length > 6) formatted += ' ' + limited.substring(6, 10);
+    return formatted;
+  };
+
+  const capitalize = (val: string) => {
+    return val.toLowerCase().replace(/(^|\s)\S/g, l => l.toUpperCase());
   };
 
   const handleSave = async () => {
@@ -104,6 +147,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
       firmaProveedor,
       firmaAsesor,
       nombreAsesor: nombreAsesor.toUpperCase(),
+      personaAtendio: personaAtendio,
       fotos
     };
 
@@ -145,6 +189,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setFirmaProveedor('');
     setFirmaAsesor('');
     setNombreAsesor('');
+    setPersonaAtendio('');
     setFotos([]);
     setActiveTab('form');
   };
@@ -155,7 +200,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setCodigo(v.codigo);
     setRuta(v.ruta);
     setProveedor(v.proveedor);
-    setTelefono(v.telefono || '');
+    setTelefono(formatPhone(v.telefono || ''));
     setGenero(v.genero || '');
     setEdad(v.edad || '');
     
@@ -177,6 +222,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     setFirmaProveedor(v.firmaProveedor);
     setFirmaAsesor(v.firmaAsesor);
     setNombreAsesor(v.nombreAsesor || '');
+    setPersonaAtendio(v.personaAtendio || '');
     setFotos(v.fotos || []);
     
     setDetailVisit(null);
@@ -280,7 +326,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
 
     const headerStyle = {
       font: { name: "Arial", sz: 14, bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "002B5C" }, patternType: "solid" },
+      fill: { fgColor: { rgb: "003366" }, patternType: "solid" },
       alignment: { vertical: "center", horizontal: "center", wrapText: true },
       border: {
         top: { style: "thin", color: { rgb: "000000" } },
@@ -316,13 +362,13 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
     
     // Header row
     const ws_data: any[][] = [
-      ["Fecha", "Código Proveedor", "Proveedor", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
+      ["Fecha", "Código Proveedor", "Proveedor", "Persona quien atendió", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
     ];
 
     // Data rows
     visitas.forEach(v => {
       ws_data.push([
-        v.fecha, v.codigo, v.proveedor, v.ruta, v.telefono, v.genero, v.edad, 
+        v.fecha, v.codigo, v.proveedor, v.personaAtendio || '-', v.ruta, v.telefono, v.genero, v.edad, 
         v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
         v.comentarios, (v.lat && v.lng ? `${v.lat}, ${v.lng}` : 'N/A'), v.alt || 'N/A'
       ]);
@@ -338,12 +384,12 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
   const exportSingleExcel = (v: Visita) => {
     // Header row
     const ws_data: any[][] = [
-      ["Fecha", "Código Proveedor", "Proveedor", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
+      ["Fecha", "Código Proveedor", "Proveedor", "Persona quien atendió", "Ruta/Tanque", "Teléfono", "Género", "Edad", "Temas Tratados", "Otros Temas", "Objetivo", "Actividades", "Recomendaciones", "Comentarios", "Coordenadas (Lat, Long)", "Altitud (m.s.n.m)"]
     ];
 
     // Data row
     ws_data.push([
-      v.fecha, v.codigo, v.proveedor, v.ruta, v.telefono, v.genero, v.edad, 
+      v.fecha, v.codigo, v.proveedor, v.personaAtendio || '-', v.ruta, v.telefono, v.genero, v.edad, 
       v.temas.join(" | "), v.otros, v.objetivo, v.actividades, v.recomendaciones, 
       v.comentarios, (v.lat && v.lng ? `${v.lat}, ${v.lng}` : 'N/A'), v.alt || 'N/A'
     ]);
@@ -389,8 +435,8 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             </table>
             <table style="width: 100%; margin-bottom: 25px; font-size: 13px; border-collapse: collapse;">
                 <tr><td style="padding: 8px; border: 1px solid #eee; width: 50%;"><b>Proveedor:</b> <span style="text-transform:uppercase;">${v.proveedor}</span></td><td style="padding: 8px; border: 1px solid #eee; width: 50%;"><b>Fecha:</b> ${v.fecha}</td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Teléfono:</b> ${v.telefono || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"><b>Código Proveedor:</b> ${v.codigo || '-'}</td></tr>
-                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Ruta/Tanque:</b> ${v.ruta || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Persona atendió:</b> ${v.personaAtendio || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"><b>Teléfono:</b> ${v.telefono || '-'}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #eee;"><b>Código Proveedor:</b> ${v.codigo || '-'}</td><td style="padding: 8px; border: 1px solid #eee;"><b>Ruta/Tanque:</b> ${v.ruta || '-'}</td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #eee;" colspan="2"><b>Coordenadas GPS:</b> ${v.lat ? v.lat + ', ' + v.lng : 'No registradas'} <br><b style="margin-top:4px; display:inline-block;">Altitud:</b> ${v.alt !== null ? v.alt + ' m.s.n.m' : 'No registrada'}</td></tr>
                 <tr><td style="padding: 8px; border: 1px solid #eee; background: #f8fafc;" colspan="2"><b>Temas Tratados:</b> ${v.temas.join(' | ')} ${v.otros ? '| Otros: ' + v.otros : ''}</td></tr>
             </table>
@@ -474,30 +520,41 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
             {/* Formulario */}
             <div className="bg-white rounded-2xl shadow p-5 space-y-4 border-2 border-gray-200 border-b-4">
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Fecha</label>
-                  <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
+                <div className="flex flex-col justify-between h-full">
+                  <label className="block text-xs font-bold text-black mb-1 text-center">Fecha</label>
+                  <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center leading-tight h-12" />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Código Proveedor</label>
-                  <input type="text" inputMode="numeric" value={codigo} onChange={e => setCodigo(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej. 12345" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
+                <div className="flex flex-col justify-between h-full">
+                  <label className="block text-xs font-bold text-black mb-1 text-center">Código Proveedor</label>
+                  <input type="text" inputMode="numeric" value={codigo} onChange={e => setCodigo(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej. 12345" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center h-12" />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1 text-center">Ruta/Tanque</label>
-                  <input type="text" value={ruta} onChange={e => setRuta(e.target.value)} placeholder="Ruta/Tanque" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center" />
+                <div className="flex flex-col justify-between h-full">
+                  <label className="block text-xs font-bold text-black mb-1 text-center">Ruta / Tanque</label>
+                  <input type="text" value={ruta} onChange={e => setRuta(e.target.value)} placeholder="Ruta/Tanque" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-3 py-3 text-[11px] sm:text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium text-center h-12" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">Proveedor / Ganadero</label>
+                <label className="block text-xs font-bold text-black mb-1">Proveedor / Ganadero</label>
                 <input type="text" value={proveedor} onChange={e => setProveedor(e.target.value.toUpperCase())} placeholder="Nombre del proveedor" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all uppercase tracking-wider bg-transparent font-bold" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">Teléfono</label>
-                <input type="text" inputMode="numeric" value={telefono} onChange={e => setTelefono(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Ej. 3001234567" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" />
+                <label className="block text-xs font-bold text-black mb-1">Persona quien atendió</label>
+                <input 
+                  type="text" 
+                  value={personaAtendio} 
+                  onChange={e => setPersonaAtendio(capitalize(e.target.value))} 
+                  onBlur={e => setPersonaAtendio(capitalize(e.target.value))}
+                  placeholder="Nombre de quien atendió" 
+                  className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-black mb-1">Teléfono</label>
+                <input type="text" inputMode="numeric" value={telefono} onChange={e => setTelefono(formatPhone(e.target.value))} placeholder="000 000 0000" className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Género</label>
+                  <label className="block text-xs font-bold text-black mb-1">Género</label>
                   <select value={genero} onChange={e => setGenero(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium">
                     <option value="">Seleccione...</option>
                     <option value="Hombre">Hombre</option>
@@ -505,7 +562,7 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Edad</label>
+                  <label className="block text-xs font-bold text-black mb-1">Edad</label>
                   <select value={edad} onChange={e => setEdad(e.target.value)} className="w-full border-2 border-gray-200 border-b-4 shadow-[0_4px_0_0_#e5e7eb] rounded-xl px-2 py-3 text-sm focus:outline-none focus:border-blue-600 focus:shadow-[0_4px_0_0_#2563eb] transition-all bg-transparent font-medium">
                     <option value="">Seleccione...</option>
                     <option value="Mayor de 30 años">Mayor de 30 años</option>
@@ -543,9 +600,14 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
                   <MapPin className="w-4 h-4 text-emerald-600 drop-shadow-sm" />
                   <span>COORDENADAS GPS</span>
                 </div>
-                <button onClick={getLocation} disabled={isLocating} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs flex items-center gap-2 font-bold border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all disabled:opacity-50 disabled:active:border-b-4 disabled:active:translate-y-0">
-                  <Crosshair className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} /> {isLocating ? 'Obteniendo...' : 'Obtener'}
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={() => setManualModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs flex items-center gap-2 font-bold border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all">
+                    Manual
+                  </button>
+                  <button onClick={getLocation} disabled={isLocating} className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs flex items-center gap-2 font-bold border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all disabled:opacity-50 disabled:active:border-b-4 disabled:active:translate-y-0">
+                    <Crosshair className={`w-3 h-3 ${isLocating ? 'animate-spin' : ''}`} /> {isLocating ? '...' : 'Auto'}
+                  </button>
+                </div>
               </div>
               <div className="bg-gray-50 rounded-2xl p-4 text-xs space-y-2 border-2 border-gray-100 shadow-inner">
                 <div className="flex justify-between border-b border-gray-200 pb-1">
@@ -708,11 +770,19 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
               <button onClick={() => setDetailVisit(null)} className="w-8 h-8 flex items-center justify-center text-2xl leading-none text-emerald-800 bg-emerald-200 hover:bg-emerald-300 rounded-full transition"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 overflow-auto flex-1 space-y-5 text-sm">
-              <div className="bg-gray-50 p-4 rounded-xl grid grid-cols-2 gap-4">
-                <div><span className="text-xs text-gray-400 uppercase font-bold">Fecha</span><br/><span className="font-medium text-gray-800">{detailVisit.fecha}</span></div>
-                <div><span className="text-xs text-gray-400 uppercase font-bold">Proveedor</span><br/><span className="font-medium text-gray-800">{detailVisit.proveedor}</span></div>
-                <div><span className="text-xs text-gray-400 uppercase font-bold">Cód/Ruta</span><br/><span className="font-medium text-gray-800">{detailVisit.codigo || '-'} / {detailVisit.ruta || '-'}</span></div>
-                <div><span className="text-xs text-gray-400 uppercase font-bold">GPS / Alt</span><br/><span className="font-medium text-gray-800">{detailVisit.lat ? '📍 Sí' : 'No'} / {detailVisit.alt !== null ? detailVisit.alt+'m' : '-'}</span></div>
+              <div className="bg-gray-50 p-4 rounded-xl space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">Fecha</span><br/><span className="font-medium text-gray-800">{detailVisit.fecha}</span></div>
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">Proveedor</span><br/><span className="font-medium text-gray-800">{detailVisit.proveedor}</span></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">Quien atendió</span><br/><span className="font-medium text-gray-800">{detailVisit.personaAtendio || '-'}</span></div>
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">Cód/Ruta</span><br/><span className="font-medium text-gray-800">{detailVisit.codigo || '-'} / {detailVisit.ruta || '-'}</span></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">Teléfono</span><br/><span className="font-medium text-gray-800">{detailVisit.telefono || '-'}</span></div>
+                  <div><span className="text-xs text-gray-400 uppercase font-bold">GPS / Alt</span><br/><span className="font-medium text-gray-800">{detailVisit.lat ? '📍 Sí' : 'No'} / {detailVisit.alt !== null ? detailVisit.alt+'m' : '-'}</span></div>
+                </div>
               </div>
               {detailVisit.temas.length > 0 && (
                 <div>
@@ -743,6 +813,22 @@ export default function VisitaInforme({ onBack }: VisitaInformeProps) {
               <button onClick={() => exportSinglePDF(detailVisit)} className="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded-2xl text-[11px] font-extrabold flex flex-col items-center justify-center gap-1 transition-all shadow-[0_4px_0_0_#991b1b] border-b-4 border-red-800 active:border-b-0 active:translate-y-1">
                 <FileText className="w-5 h-5 drop-shadow-sm" /> PDF
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {manualModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-6 space-y-4 shadow-2xl">
+            <h3 className="font-bold text-lg text-gray-800">Coordenadas Manuales</h3>
+            <div className="space-y-3">
+              <input type="text" value={manualLat} onChange={e => setManualLat(e.target.value)} placeholder="Latitud" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-600" />
+              <input type="text" value={manualLng} onChange={e => setManualLng(e.target.value)} placeholder="Longitud" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-600" />
+              <input type="text" value={manualAlt} onChange={e => setManualAlt(e.target.value)} placeholder="Altura (m.s.n.m)" className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-600" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setManualModalOpen(false)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-bold text-sm">Cancelar</button>
+              <button onClick={saveManualLocation} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm">Guardar</button>
             </div>
           </div>
         </div>

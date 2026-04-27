@@ -26,7 +26,7 @@ export async function exportExcel(cod: string, v: VisitaData) {
   });
 
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  const NAVY = "1F3A5F";
+  const NAVY = "003366";
   const NAVY_LIGHT = "2C5282";
   const SI_GREEN_BG = "D1FAE5";
   const SI_GREEN_FG = "065F46";

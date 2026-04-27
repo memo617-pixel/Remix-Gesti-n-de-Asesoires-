@@ -13,6 +13,35 @@ export default function SignaturePad({ title, initialData, onSave, onClose }: Pr
   const [isDrawing, setIsDrawing] = useState(false);
 
   useEffect(() => {
+    const tryLockOrientation = async () => {
+      try {
+        const docElem = document.documentElement;
+        if (docElem.requestFullscreen) {
+          await docElem.requestFullscreen();
+        }
+        if (window.screen && window.screen.orientation && (window.screen.orientation as any).lock) {
+          await (window.screen.orientation as any).lock('landscape');
+        }
+      } catch (err) {
+        console.warn("Fullscreen/Orientation lock failed:", err);
+      }
+    };
+
+    tryLockOrientation();
+
+    return () => {
+      try {
+        if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+          window.screen.orientation.unlock();
+        }
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      } catch (err) {}
+    };
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -23,6 +52,11 @@ export default function SignaturePad({ title, initialData, onSave, onClose }: Pr
       if (!rect) return;
       canvas.width = rect.width * 2;
       canvas.height = rect.height * 2;
+      
+      // White background for JPEG
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       ctx.scale(2, 2);
       ctx.lineWidth = 3.5;
       ctx.lineJoin = "round";
@@ -78,14 +112,15 @@ export default function SignaturePad({ title, initialData, onSave, onClose }: Pr
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   };
 
   const save = () => {
     const canvas = canvasRef.current;
     if (canvas) {
-      onSave(canvas.toDataURL('image/png'));
+      onSave(canvas.toDataURL('image/jpeg', 0.7));
     }
   };
 

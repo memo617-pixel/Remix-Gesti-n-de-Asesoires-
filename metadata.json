@@ -1,6 +1,9 @@
 {
   "name": "1.Remix: Gestión de Asesores ",
   "description": "Aplicación móvil para asesores técnicos agropecuarios del sector lechero, optimizada para uso offline.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
   "majorCapabilities": []
 }
