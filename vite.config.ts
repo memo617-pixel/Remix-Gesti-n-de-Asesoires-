@@ -18,6 +18,14 @@ export default defineConfig(({mode}) => {
     },
     build: {
       chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'export-vendor': ['exceljs', 'jspdf', 'xlsx', 'html2canvas'],
+            'ui-vendor': ['lucide-react', 'motion'],
+          }
+        }
+      }
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
